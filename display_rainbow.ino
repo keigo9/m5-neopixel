@@ -3,7 +3,7 @@
 
 #define M5STACK_MPU6886 // 6軸IMU for M5Core2
 #define PIN 32        // M5Core2 Grobe Pin
-#define NUMPIXELS 30 // Enough for LEDs
+#define NUMPIXELS 300 // Enough for LEDs
 #define DELAYVAL 500   // Time (in milliseconds) to pause between pixels
 #define gyroX_max 500
 #define gyroX_min -500
@@ -96,7 +96,6 @@ void loop() {
     M5.Lcd.fillScreen(TFT_NAVY);
     for (int i = 0; i < NUMPIXELS; i++)
     {
-      int rgb = i % 3;
       pixels.setPixelColor(i, pixels.Color(255,0,0));
     }
     pixels.show();
@@ -112,7 +111,6 @@ void loop() {
     M5.Lcd.fillScreen(TFT_NAVY);
     for (int i = 0; i < NUMPIXELS; i++)
     {
-      int rgb = i % 3;
       pixels.setPixelColor(i, pixels.Color(0,255,0));
     }
     pixels.show();
@@ -128,7 +126,6 @@ void loop() {
     M5.Lcd.fillScreen(TFT_NAVY);
     for (int i = 0; i < NUMPIXELS; i++)
     {
-      int rgb = i % 3;
       pixels.setPixelColor(i, pixels.Color(0,0,255));
     }
     pixels.show();
