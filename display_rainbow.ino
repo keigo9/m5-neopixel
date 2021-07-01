@@ -53,14 +53,14 @@ void loop() {
 
   pixels.clear();
 
-  for (int i = 0; i < NUMPIXELS; i++)
-  {
-    int rgb = i % 3;
-    pixels.setPixelColor(i, pixels.Color(led_color[rgb][0], led_color[rgb][1], led_color[rgb][2]));
-  }
-  pixels.show();
+//  for (int i = 0; i < NUMPIXELS; i++)
+//  {
+//    int rgb = i % 3;
+//    pixels.setPixelColor(i, pixels.Color(led_color[rgb][0], led_color[rgb][1], led_color[rgb][2]));
+//  }
+//  pixels.show();
   
-  delay(10);
+//  delay(10);
   
   // 角度センサ（ジャイロ）の取得
   M5.IMU.getGyroData( &gyroX, &gyroY, &gyroZ );
@@ -102,6 +102,8 @@ void loop() {
 
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.printf("gyroX=(%5.1f)", gyroX);
+    Serial.printf("gyroX=(%5.1f)", gyroX);
+    Serial.println();
     
     // 500ms待機
     delay(DELAYVAL);
@@ -117,6 +119,8 @@ void loop() {
 
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.printf("gyroY=(%5.1f)", gyroY);
+    Serial.printf("gyroY=(%5.1f)", gyroY);
+    Serial.println();
     
     // 500ms待機
     delay(DELAYVAL);
@@ -132,11 +136,22 @@ void loop() {
 
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.printf("gyroZ=(%5.1f)", gyroZ);
+    Serial.printf("gyroZ=(%5.1f)", gyroZ);
+    Serial.println();
     
     // 500ms待機
     delay(DELAYVAL);
     
-  } 
+  } else {
+    for (int i = 0; i < NUMPIXELS; i++)
+    {
+      int rgb = i % 3;
+      pixels.setPixelColor(i, pixels.Color(led_color[rgb][0], led_color[rgb][1], led_color[rgb][2]));
+    }
+    pixels.show();
+  }
+
+  delay(20);
   
 
 //  M5.Lcd.setCursor(0, 0);
