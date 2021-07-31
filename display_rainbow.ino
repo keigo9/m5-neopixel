@@ -1,9 +1,12 @@
 #include <M5Core2.h>
 #include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+ #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
+#endif
 
 #define M5STACK_MPU6886 // 6軸IMU for M5Core2
-#define PIN 32        // M5Core2 Grobe Pin
-#define NUMPIXELS 300 // Enough for LEDs
+#define LED_PIN 32      // M5Core2 Grobe Pin
+#define LED_COUNT 400 // Enough for LEDs
 #define DELAYVAL 500   // Time (in milliseconds) to pause between pixels
 #define gyroX_max 500
 #define gyroX_min -500
@@ -11,27 +14,37 @@
 #define gyroY_min -500
 #define gyroZ_max 500
 #define gyroZ_min -500
-// RGB config
-int led_color[3][3] = {{10, 0, 0}, {0, 10, 0}, {0, 0, 10}};
 
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+//float accX = 0.0F;
+//float accY = 0.0F;
+//float accZ = 0.0F;
 
-/////////////////////////////////////
-void setup_serial(){
+float gyroX = 0.0F;
+float gyroY = 0.0F;
+float gyroZ = 0.0F;
 
-  Serial.begin(115200);
-  while (!Serial);
+//float pitch = 0.0F;
+//float roll  = 0.0F;
+//float yaw   = 0.0F;
 
-}
+// Declare our NeoPixel strip object:
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup(){
 
-  pixels.begin();
+  // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
+  // Any other board, you can remove this part (but no harm leaving it):
+#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
+  clock_prescale_set(clock_div_1);
+#endif
+  // END of Trinket-specific code.
+
+  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+  strip.show();            // Turn OFF all pixels ASAP
+  strip.setBrightness(20); // (max = 255)
 
   // 初期化
   M5.begin();
-
-  setup_serial();
 
   M5.IMU.Init();
   
@@ -44,131 +57,48 @@ void setup(){
 }
 
 void loop() {
-  float accX, accY, accZ;
-  float gyroX, gyroY, gyroZ;
-  float pitch, roll, yaw;
-
   // 画面初期化
   M5.Lcd.fillScreen(TFT_NAVY);
-
-  pixels.clear();
-
-//  for (int i = 0; i < NUMPIXELS; i++)
-//  {
-//    int rgb = i % 3;
-//    pixels.setPixelColor(i, pixels.Color(led_color[rgb][0], led_color[rgb][1], led_color[rgb][2]));
-//  }
-//  pixels.show();
   
-//  delay(10);
-  
+  angularVelocityInterrupt();
+}
+
+void angularVelocityInterrupt() {
   // 角度センサ（ジャイロ）の取得
   M5.IMU.getGyroData( &gyroX, &gyroY, &gyroZ );
-
-  // 画面表示
-//  M5.Lcd.setCursor(0, 0);
-//  M5.Lcd.printf("gyro=(%5.1f, %5.1f, %5.1f)", gyroX, gyroY, gyroZ);
-//  // シリアル通信出力
-//  Serial.printf("gyro=(%5.1f, %5.1f, %5.1f)", gyroX, gyroY, gyroZ);
-//  Serial.println();
 
   // 加速度センサの取得
 //  M5.IMU.getAccelData( &accX, &accY, &accZ );
 
-  // 画面表示
-//  M5.Lcd.setCursor(0, 50);
-//  M5.Lcd.printf("acc=(%5.1f, %5.1f, %5.1f)", accX, accY, accZ);
-//  // シリアル通信出力
-//  Serial.printf("acc=(%5.1f, %5.1f, %5.1f)", accX, accY, accZ);
-//  Serial.println();
-
   // 姿勢角度センサの取得
 //  M5.IMU.getAhrsData( &pitch, &roll, &yaw );
 
-  // 画面表示
-//  M5.Lcd.setCursor(0, 100);
-//  M5.Lcd.printf("PRY=(%5.1f, %5.1f, %5.1f)", pitch, roll, yaw);
-//  // シリアル通信出力
-//  Serial.printf("PRY=(%5.1f, %5.1f, %5.1f)", pitch, roll, yaw);
-//  Serial.println();
-
   if (gyroX > gyroX_max || gyroX < gyroX_min) {
-    M5.Lcd.fillScreen(TFT_NAVY);
-    for (int i = 0; i < NUMPIXELS; i++)
-    {
-      pixels.setPixelColor(i, pixels.Color(255,0,0));
-    }
-    pixels.show();
-
-    M5.Lcd.setCursor(0, 0);
-    M5.Lcd.printf("gyroX=(%5.1f)", gyroX);
-    Serial.printf("gyroX=(%5.1f)", gyroX);
-    Serial.println();
     
+    simpleLight(strip.Color(255,0,0)); //red    
     // 500ms待機
     delay(DELAYVAL);
     
   } else if (gyroY > gyroY_max || gyroY < gyroY_min) {
     
-    M5.Lcd.fillScreen(TFT_NAVY);
-    for (int i = 0; i < NUMPIXELS; i++)
-    {
-      pixels.setPixelColor(i, pixels.Color(0,255,0));
-    }
-    pixels.show();
-
-    M5.Lcd.setCursor(0, 0);
-    M5.Lcd.printf("gyroY=(%5.1f)", gyroY);
-    Serial.printf("gyroY=(%5.1f)", gyroY);
-    Serial.println();
-    
+    simpleLight(strip.Color(0,255,0)); //blue
     // 500ms待機
     delay(DELAYVAL);
     
   } else if (gyroZ > gyroZ_max || gyroZ < gyroZ_min) {
     
-    M5.Lcd.fillScreen(TFT_NAVY);
-    for (int i = 0; i < NUMPIXELS; i++)
-    {
-      pixels.setPixelColor(i, pixels.Color(0,0,255));
-    }
-    pixels.show();
-
-    M5.Lcd.setCursor(0, 0);
-    M5.Lcd.printf("gyroZ=(%5.1f)", gyroZ);
-    Serial.printf("gyroZ=(%5.1f)", gyroZ);
-    Serial.println();
-    
+    simpleLight(strip.Color(0,0,255)); //green
     // 500ms待機
     delay(DELAYVAL);
     
-  } else {
-    for (int i = 0; i < NUMPIXELS; i++)
-    {
-      int rgb = i % 3;
-      pixels.setPixelColor(i, pixels.Color(led_color[rgb][0], led_color[rgb][1], led_color[rgb][2]));
-    }
-    pixels.show();
-  }
-
+  } 
+  simpleLight(strip.Color(100,100,100)); //white
   delay(20);
-  
+}
 
-//  M5.Lcd.setCursor(0, 0);
-//  M5.Lcd.printf("gyro=(%5.1f, %5.1f, %5.1f)", gyroX, gyroY, gyroZ);
-//  delay(1000);
-    
-  
-//  for (int i = 0; i < NUMPIXELS; i++)
-//  {
-//    int rgb = i % 3;
-//    pixels.setPixelColor(i, pixels.Color(led_color[rgb][0], led_color[rgb][1], led_color[rgb][2]));
-//  }
-//  pixels.show();
-//  
-//  // 500ms待機
-//  delay(DELAYVAL);
-  
- 
-
+void simpleLight(uint32_t color) {
+    for (int i = 0; i < strip.numPixels(); i++) {
+      strip.setPixelColor(i, color);
+    }
+    strip.show();
 }
