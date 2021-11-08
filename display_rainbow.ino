@@ -10,24 +10,25 @@
 #define LED_PIN 32      // M5Core2 Grobe Pin
 #define LED_COUNT 400   // Enough for LEDs
 #define DELAYVAL 500    // Time (in milliseconds) to pause between pixels
-#define gyroX_max 150
-#define gyroX_min -150
-#define gyroY_max 150
-#define gyroY_min -150
-#define gyroZ_max 150
-#define gyroZ_min -150
+#define ahrsX_max 30
+#define ahrsX_min -30
+#define ahrsY_max 30
+#define ahrsY_min -30
+#define gyroZ_max 220
+#define gyroZ_min -220
+#define threshold_acc 2
 
-//float accX = 0.0F;
-//float accY = 0.0F;
-//float accZ = 0.0F;
+float accX = 0.0F;
+float accY = 0.0F;
+float accZ = 0.0F;
 
 float gyroX = 0.0F;
 float gyroY = 0.0F;
 float gyroZ = 0.0F;
 
-//float pitch = 0.0F;
-//float roll  = 0.0F;
-//float yaw   = 0.0F;
+float pitch = 0.0F;
+float roll  = 0.0F;
+float yaw   = 0.0F;
 
 char ssid[] = "圭悟のiPhone";
 char pass[] = "keigo111";
@@ -43,7 +44,7 @@ String timeStr;
 File file;
 
 // 保存するファイル名
-const char *fname = "/1020.csv";
+const char *fname = "/test.csv";
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -65,19 +66,19 @@ void getTime()
   dateStr = (String)(timeinfo.tm_year + 1900) + "/" + (String)(timeinfo.tm_mon + 1) + "/" + (String)timeinfo.tm_mday;
   timeStr = (String)timeinfo.tm_hour + ":" + (String)timeinfo.tm_min + ":" + (String)timeinfo.tm_sec;
 
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.setTextColor(WHITE);
+//  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(WHITE, BLACK);
   M5.Lcd.setCursor(0, 50, 1);
   M5.Lcd.println(dateStr + "   ");
   M5.Lcd.println(timeStr + "   ");
 }
 
-void writeData(float paramStr, float paramStr2, float paramStr3)
+void writeData(float groStr, float groStr2, float groStr3, float ahrsStr, float ahrsStr2, float ahrsStr3, float accStr, float accStr2, float accStr3)
 {
   // SDカードへの書き込み処理（ファイル追加モード）
   // SD.beginはM5.begin内で処理されているので不要
   file = SD.open(fname, FILE_APPEND);
-  file.println(dateStr + "," + timeStr + "," + paramStr + "," + paramStr2 + "," + paramStr3);
+  file.println(dateStr + "," + timeStr + "," + groStr + "," + groStr2 + "," + groStr3 + "," + ahrsStr + "," + ahrsStr2 + "," + ahrsStr3 + "," + accStr + "," + accStr2 + "," + accStr3);
   file.close();
 }
 
@@ -101,7 +102,7 @@ void setup()
   M5.IMU.Init();
 
   // 起動画面設定
-  M5.Lcd.fillScreen(BLACK);
+  //M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setTextSize(4);
   M5.Lcd.setTextColor(WHITE, BLACK);
   M5.Lcd.printf("START");
@@ -113,6 +114,7 @@ void setup()
     M5.Lcd.print(".");
   }
   M5.Lcd.println("\nWiFi connected.");
+  M5.Lcd.fillScreen(BLACK);
 
   // timeSet
   getTimeFromNTP();
@@ -120,41 +122,100 @@ void setup()
 
 void loop()
 {
-  M5.update();
-  getTime();
-  M5.Lcd.setCursor(0, 100, 1);
+  updateInit();
 
-  angularVelocityInterrupt();
-}
-
-void angularVelocityInterrupt()
-{
-  // 角度センサ（ジャイロ）の取得
-  M5.IMU.getGyroData(&gyroX, &gyroY, &gyroZ);
-  // 加速度センサの取得
-  //  M5.IMU.getAccelData( &accX, &accY, &accZ );
-  // 姿勢角度センサの取得
-  //  M5.IMU.getAhrsData( &pitch, &roll, &yaw );
-
-  if (gyroX > gyroX_max || gyroX < gyroX_min)
-  {
-    writeData(gyroX, gyroY, gyroZ);
-    theaterChase(strip.Color(255, 0, 0), 500); //red
-  }
-  else if (gyroY > gyroY_max || gyroY < gyroY_min)
-  {
-    writeData(gyroX, gyroY, gyroZ);
-    theaterChase(strip.Color(0, 255, 0), 500); //green
-  }
-  else if (gyroZ > gyroZ_max || gyroZ < gyroZ_min)
-  {
-    writeData(gyroX, gyroY, gyroZ);
-    theaterChase(strip.Color(0, 0, 255), 500); //blue
-  }
+  accInterrupt();
+  gyroInterrupt();
+  ahrsXInterrupt();
+  ahrsYInterrupt();
+  
   simpleLight(strip.Color(100, 100, 100)); //white
-  writeData(gyroX, gyroY, gyroZ);
+  writeData(gyroX, gyroY, gyroZ, pitch, roll, yaw, accX, accY, accZ);
   delay(20);
 }
+
+void updateInit()
+{
+  M5.update();
+  getTime();
+
+  // 角速度センサ（ジャイロ）の取得
+  M5.IMU.getGyroData(&gyroX, &gyroY, &gyroZ);
+  // 姿勢角度センサの取得
+  M5.IMU.getAhrsData( &pitch, &roll, &yaw );
+  // 加速度センサの取得
+  M5.IMU.getAccelData( &accX, &accY, &accZ );
+}
+
+void gyroInterrupt()
+{
+  if(gyroZ > gyroZ_max || gyroZ < gyroZ_min)
+  {
+   writeData(gyroX, gyroY, gyroZ, pitch, roll, yaw, accX, accY, accZ);
+   simpleRainbowLight(1000); //rainbow
+  }
+}
+
+void ahrsXInterrupt()
+{
+  if (roll > ahrsX_max || roll < ahrsX_min)
+  {
+    while(true)
+    {
+      updateInit();
+      
+      writeData(gyroX, gyroY, gyroZ, pitch, roll, yaw, accX, accY, accZ);
+      simpleLight(strip.Color(255, 255, 0)); //yellow
+      delay(20);
+
+      gyroInterrupt();
+      ahrsYInterrupt();
+     
+      if(roll < ahrsX_max && roll > ahrsX_min) break;
+    }
+  }
+}
+
+void ahrsYInterrupt()
+{
+  if(pitch > ahrsY_max || pitch < ahrsY_min)
+  {
+    while(true)
+    {
+      updateInit();
+      
+      writeData(gyroX, gyroY, gyroZ, pitch, roll, yaw, accX, accY, accZ);
+      simpleLight(strip.Color(255, 0, 0)); //red
+      delay(20);
+
+      gyroInterrupt();
+//      ahrsXInterrupt();
+     
+      if(pitch < ahrsY_max && pitch > ahrsY_min) break;
+    }
+  }
+}
+
+void accInterrupt()
+{
+  if(accX > threshold_acc || accY > threshold_acc || accZ > threshold_acc) {
+    while(true)
+    {
+     updateInit();
+
+     writeData(gyroX, gyroY, gyroZ, pitch, roll, yaw, accX, accY, accZ);
+     simpleLight(strip.Color(0, 0, 255)); //blue
+     delay(20);
+
+     ahrsXInterrupt();
+     ahrsYInterrupt();
+     gyroInterrupt();
+     
+     if(accX < threshold_acc && accY < threshold_acc && accZ < threshold_acc) break;
+    }
+  }
+}
+
 
 void simpleLight(uint32_t color)
 {
@@ -163,7 +224,18 @@ void simpleLight(uint32_t color)
     strip.setPixelColor(i, color);
   }
   strip.show();
-  //    delay(wait);
+  // delay(wait);
+}
+
+void simpleRainbowLight(int wait)
+{
+    for (int i = 0; i < strip.numPixels(); i++)
+    {
+      int pixelHue =  (i * 1000);
+      strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
+    }
+    strip.show(); 
+    delay(wait);
 }
 
 void theaterChase(uint32_t color, int wait)
